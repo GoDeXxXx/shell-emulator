@@ -68,6 +68,21 @@ class ShellTest(unittest.TestCase):
             self.shell.execute("exit abc")
         self.assertTrue(self.shell.running)
 
+    def test_conf_dump(self):
+        """Команда conf-dump выводит параметры запуска."""
+        shell = Shell("vfs/test.xml", "start.txt")
+        self.assertEqual(shell.execute("conf-dump"),
+                         "vfs=vfs/test.xml\nscript=start.txt")
+
+    def test_conf_dump_empty(self):
+        """Незаданные параметры выводятся пустыми."""
+        self.assertEqual(self.shell.execute("conf-dump"), "vfs=\nscript=")
+
+    def test_conf_dump_args(self):
+        """Команда conf-dump не принимает аргументы."""
+        with self.assertRaises(ShellError):
+            self.shell.execute("conf-dump -a")
+
 
 if __name__ == "__main__":
     unittest.main()

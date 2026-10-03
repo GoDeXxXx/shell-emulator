@@ -1,0 +1,8 @@
+# Проверка команд этапов 1 и 2
+conf-dump
+ls
+ls -l /home/user
+cd /tmp
+cd
+conf-dump extra
+ls -a

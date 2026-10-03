@@ -16,19 +16,32 @@ def parse(line):
     return parts[0], parts[1:]
 
 
+def read_script(path):
+    """Читает стартовый скрипт и возвращает список команд."""
+    try:
+        with open(path, encoding="utf-8") as file:
+            lines = file.read().splitlines()
+    except (OSError, UnicodeDecodeError) as error:
+        raise ShellError(f"script: cannot read file '{path}'") from error
+    return [line for line in lines
+            if line.strip() and not line.lstrip().startswith("#")]
+
+
 class Shell:
     """Эмулятор командной оболочки UNIX."""
 
-    def __init__(self):
-        """Создает оболочку для текущего пользователя."""
+    def __init__(self, vfs_path="", script_path=""):
+        """Создает оболочку с заданными параметрами запуска."""
         self.user = getpass.getuser()
         self.host = socket.gethostname().split(".")[0]
+        self.config = {"vfs": vfs_path, "script": script_path}
         self.running = True
         self.exit_code = 0
         self.commands = {
             "ls": self.cmd_ls,
             "cd": self.cmd_cd,
             "exit": self.cmd_exit,
+            "conf-dump": self.cmd_conf_dump,
         }
 
     def prompt(self):
@@ -63,3 +76,10 @@ class Shell:
         self.exit_code = int(args[0]) if args else 0
         self.running = False
         return ""
+
+    def cmd_conf_dump(self, args):
+        """Выводит параметры эмулятора в формате ключ=значение."""
+        if args:
+            raise ShellError("conf-dump: too many arguments")
+        lines = [f"{key}={value}" for key, value in self.config.items()]
+        return "\n".join(lines)

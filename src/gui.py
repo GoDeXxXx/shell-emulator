@@ -3,7 +3,7 @@
 import tkinter as tk
 from tkinter import scrolledtext
 
-from shell import ShellError
+from shell import ShellError, read_script
 
 FONT = ("Courier", 13)
 
@@ -57,6 +57,22 @@ class ShellWindow:
         self.entry.delete(0, "end")
         self.run_command(line)
 
+    def run_script(self, path):
+        """Выполняет команды стартового скрипта до первой ошибки."""
+        try:
+            lines = read_script(path)
+        except ShellError as error:
+            self.write(str(error))
+            return
+        for line in lines:
+            if self.run_command(line):
+                continue
+            if self.shell.running:
+                self.write("Выполнение скрипта остановлено из-за ошибки")
+            return
+
     def run(self):
-        """Запускает главный цикл окна."""
+        """Запускает стартовый скрипт и главный цикл окна."""
+        if self.shell.config["script"]:
+            self.root.after(100, self.run_script, self.shell.config["script"])
         self.root.mainloop()
