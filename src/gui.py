@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import scrolledtext
 
 from shell import ShellError, read_script
+from vfs import VfsError
 
 FONT = ("Courier", 13)
 
@@ -71,8 +72,16 @@ class ShellWindow:
                 self.write("Выполнение скрипта остановлено из-за ошибки")
             return
 
-    def run(self):
-        """Запускает стартовый скрипт и главный цикл окна."""
+    def start(self):
+        """Загружает VFS и выполняет стартовый скрипт."""
+        try:
+            self.shell.load_vfs()
+        except VfsError as error:
+            self.write(str(error))
         if self.shell.config["script"]:
-            self.root.after(100, self.run_script, self.shell.config["script"])
+            self.run_script(self.shell.config["script"])
+
+    def run(self):
+        """Запускает главный цикл окна."""
+        self.root.after(100, self.start)
         self.root.mainloop()

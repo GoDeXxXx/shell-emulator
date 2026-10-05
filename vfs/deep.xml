@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vfs name="deep">
+  <dir name="home">
+    <dir name="user">
+      <file name=".profile" mode="600">export PATH=/bin:/usr/bin</file>
+      <dir name="docs">
+        <file name="notes.txt">first line
+second line
+third line
+</file>
+        <dir name="old">
+          <file name="todo.txt">buy milk
+fix bug
+pass the lab
+</file>
+        </dir>
+      </dir>
+    </dir>
+  </dir>
+  <dir name="etc">
+    <file name="hostname">emulator</file>
+    <file name="passwd">root:x:0:0:root:/root:/bin/sh
+user:x:1000:1000:user:/home/user:/bin/sh
+</file>
+  </dir>
+  <dir name="bin"/>
+  <dir name="tmp" mode="777"/>
+</vfs>

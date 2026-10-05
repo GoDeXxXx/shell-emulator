@@ -3,6 +3,8 @@
 import getpass
 import socket
 
+from vfs import Vfs, load_vfs
+
 
 class ShellError(Exception):
     """Ошибка при выполнении команды."""
@@ -35,6 +37,8 @@ class Shell:
         self.user = getpass.getuser()
         self.host = socket.gethostname().split(".")[0]
         self.config = {"vfs": vfs_path, "script": script_path}
+        self.vfs = Vfs()
+        self.cwd = self.vfs.root
         self.running = True
         self.exit_code = 0
         self.commands = {
@@ -42,7 +46,14 @@ class Shell:
             "cd": self.cmd_cd,
             "exit": self.cmd_exit,
             "conf-dump": self.cmd_conf_dump,
+            "vfs-info": self.cmd_vfs_info,
         }
+
+    def load_vfs(self):
+        """Загружает VFS по пути из параметров запуска."""
+        if self.config["vfs"]:
+            self.vfs = load_vfs(self.config["vfs"])
+            self.cwd = self.vfs.root
 
     def prompt(self):
         """Возвращает приглашение командной строки."""
@@ -83,3 +94,9 @@ class Shell:
             raise ShellError("conf-dump: too many arguments")
         lines = [f"{key}={value}" for key, value in self.config.items()]
         return "\n".join(lines)
+
+    def cmd_vfs_info(self, args):
+        """Выводит имя загруженной VFS и SHA-256 ее данных."""
+        if args:
+            raise ShellError("vfs-info: too many arguments")
+        return f"name: {self.vfs.name}\nsha256: {self.vfs.sha256}"

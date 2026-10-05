@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vfs name="files">
+  <file name="readme.txt">Файлы для проверки эмулятора</file>
+  <file name="numbers.txt">one
+two
+three
+four
+five
+</file>
+  <file name="data.bin" encoding="base64">AAECAwQFBgcICQ==</file>
+  <file name="pixel.png" encoding="base64">
+    iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwAD
+    hgGAWjR9awAAAABJRU5ErkJggg==
+  </file>
+  <file name="run.sh" mode="755">echo hello</file>
+</vfs>
