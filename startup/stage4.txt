@@ -1,0 +1,26 @@
+# Проверка команд этапа 4, запускать с vfs/deep.xml
+vfs-info
+ls
+ls -a
+ls -l /etc
+ls -la /home/user
+ls /etc/passwd
+cd /home/user/docs
+ls -l
+cd old
+ls
+tac todo.txt
+cd ../..
+cd ./docs/../..
+cd
+tac /home/user/docs/notes.txt
+tac /home/user/docs/notes.txt /home/user/docs/old/todo.txt
+date
+date +%d.%m.%Y
+date +%H:%M:%S
+uname
+uname -s -r
+uname -sm
+uname -a
+cd /home/user/docs/notes.txt
+ls

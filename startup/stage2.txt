@@ -1,8 +1,8 @@
 # Проверка команд этапов 1 и 2
 conf-dump
 ls
-ls -l /home/user
-cd /tmp
+ls -l
+cd /
 cd
 conf-dump extra
 ls -a

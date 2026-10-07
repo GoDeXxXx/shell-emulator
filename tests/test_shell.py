@@ -38,13 +38,14 @@ class ShellTest(unittest.TestCase):
             self.shell.execute("foo bar")
         self.assertEqual(str(error.exception), "foo: command not found")
 
-    def test_ls_stub(self):
-        """Заглушка ls выводит имя и аргументы."""
-        self.assertEqual(self.shell.execute("ls -l /tmp"), "ls -l /tmp")
+    def test_ls_empty_vfs(self):
+        """В пустой VFS команда ls ничего не выводит."""
+        self.assertEqual(self.shell.execute("ls"), "")
 
-    def test_cd_stub(self):
-        """Заглушка cd выводит имя и аргументы."""
-        self.assertEqual(self.shell.execute("cd docs"), "cd docs")
+    def test_cd_root(self):
+        """Переход в корень пустой VFS."""
+        self.assertEqual(self.shell.execute("cd /"), "")
+        self.assertTrue(self.shell.prompt().endswith(":/$ "))
 
     def test_cd_too_many_args(self):
         """Команда cd принимает не больше одного аргумента."""

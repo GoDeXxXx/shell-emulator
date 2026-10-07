@@ -9,6 +9,7 @@ from xml.etree.ElementTree import ParseError, fromstring
 
 DIR_MODE = 0o755
 FILE_MODE = 0o644
+PERMISSIONS = "rwxrwxrwx"
 
 
 class VfsError(Exception):
@@ -31,6 +32,14 @@ class Node:
         """Добавляет дочерний узел в каталог."""
         node.parent = self
         self.children[node.name] = node
+
+    def mode_string(self):
+        """Возвращает права доступа в виде строки drwxr-xr-x."""
+        result = "d" if self.is_dir else "-"
+        for index, char in enumerate(PERMISSIONS):
+            bit = 1 << (len(PERMISSIONS) - index - 1)
+            result += char if self.mode & bit else "-"
+        return result
 
 
 class Vfs:

@@ -2,8 +2,8 @@
 vfs-info
 conf-dump
 ls
-ls -l /home/user
-cd /home
+ls -l
+cd /
 cd
 vfs-info --all
 conf-dump

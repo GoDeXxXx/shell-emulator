@@ -80,16 +80,43 @@ VFS загружается из XML-файла, указанного в `--vfs`,
 
 | Команда | Описание |
 |---------|----------|
-| `ls [аргументы]` | заглушка, выводит свое имя и аргументы |
-| `cd [путь]` | заглушка, выводит свое имя и аргумент |
+| `ls [-a] [-l] [путь]` | содержимое каталога или имя файла |
+| `cd [путь]` | переход в каталог, без аргумента в корень `/` |
+| `date [+формат]` | текущие дата и время |
+| `tac файл...` | строки файлов в обратном порядке |
+| `uname [-snrvma]` | информация о системе |
+| `conf-dump` | параметры эмулятора в формате ключ=значение |
+| `vfs-info` | имя VFS и хеш SHA-256 ее данных |
 | `exit [код]` | закрывает эмулятор с указанным кодом (по умолчанию 0) |
-| `conf-dump` | выводит параметры эмулятора в формате ключ=значение |
-| `vfs-info` | выводит имя VFS и хеш SHA-256 ее данных |
 
 Строка ввода разбивается на команду и аргументы по пробелам.
-Если команда неизвестна, выводится `имя: command not found`.
-При неверных аргументах выводится сообщение об ошибке, например
-`cd: too many arguments` или `exit: abc: numeric argument required`.
+Пути могут быть абсолютными (`/home/user`) и относительными
+(`docs`, `../etc`), поддерживаются `.` и `..`. В приглашении
+показывается текущий каталог VFS.
+
+Опции команд:
+
+- `ls -a` показывает скрытые файлы, а также `.` и `..`;
+- `ls -l` выводит права доступа, владельца и размер;
+- опции можно объединять: `ls -la`;
+- `date +ФОРМАТ` выводит дату в формате strftime, например
+  `date +%d.%m.%Y`;
+- `uname -s` имя системы, `-n` имя узла, `-r` версия ядра,
+  `-v` описание ядра, `-m` архитектура, `-a` все сразу. Без опций
+  работает как `uname -s`. Данные берутся из реальной ОС.
+
+Сообщения об ошибках:
+
+| Ситуация | Пример сообщения |
+|----------|------------------|
+| неизвестная команда | `hello: command not found` |
+| нет файла или каталога | `cd: /nope: No such file or directory` |
+| не каталог | `cd: /etc/passwd: Not a directory` |
+| каталог вместо файла | `tac: /etc: Is a directory` |
+| неизвестная опция | `ls: invalid option -- 'z'` |
+| лишние аргументы | `cd: too many arguments` |
+| нет аргумента | `tac: missing file operand` |
+| неверный аргумент | `exit: abc: numeric argument required` |
 
 ## Сборка и запуск
 
@@ -137,51 +164,67 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 | `scripts/test_vfs_files.sh` | VFS из нескольких файлов |
 | `scripts/test_vfs_deep.sh` | VFS с несколькими уровнями вложенности |
 | `scripts/test_vfs_errors.sh` | ошибки загрузки VFS |
+| `scripts/test_stage4.sh` | команды этапа 4 |
 
 Каждый скрипт по очереди открывает несколько окон эмулятора,
 следующее окно открывается после закрытия предыдущего.
 
 ## Пример работы
 
+Запуск `./run.sh --vfs vfs/deep.xml`:
+
 ```
-user@host:~$ ls -l /home
-ls -l /home
-user@host:~$ cd docs
-cd docs
-user@host:~$ cd a b
-cd: too many arguments
-user@host:~$ hello
+user@host:/$ vfs-info
+name: deep
+sha256: b1155a742c81805ae6cbc7e23d3c1f213d601cc613de7193341489b4f0039411
+user@host:/$ ls
+bin  etc  home  tmp
+user@host:/$ ls -la /home/user
+drwxr-xr-x user      0 .
+drwxr-xr-x user      0 ..
+-rw------- user     25 .profile
+drwxr-xr-x user      0 docs
+user@host:/$ cd /home/user/docs
+user@host:/home/user/docs$ ls -l
+-rw-r--r-- user     34 notes.txt
+drwxr-xr-x user      0 old
+user@host:/home/user/docs$ tac notes.txt
+third line
+second line
+first line
+user@host:/home/user/docs$ cd ../../..
+user@host:/$ date
+Thu Oct 08 19:00:03 MSK 2026
+user@host:/$ date +%d.%m.%Y
+08.10.2026
+user@host:/$ uname -sm
+Darwin arm64
+user@host:/$ cd /etc/passwd
+cd: /etc/passwd: Not a directory
+user@host:/$ hello
 hello: command not found
-user@host:~$ exit abc
-exit: abc: numeric argument required
-user@host:~$ exit
+user@host:/$ exit
 ```
 
 После `exit` окно закрывается.
 
-Информация о загруженной VFS:
+Выполнение стартового скрипта `startup/stage3.txt` с минимальной VFS
+(скрипт останавливается на первой ошибке):
 
 ```
-user@host:~$ vfs-info
-name: deep
-sha256: b1155a742c81805ae6cbc7e23d3c1f213d601cc613de7193341489b4f0039411
-```
-
-Выполнение стартового скрипта `startup/stage2.txt`:
-
-```
-user@host:~$ conf-dump
+user@host:/$ vfs-info
+name: minimal
+sha256: f8140ba88b1f3d0d526b351aeff0501cef74d159164ccb825f5748b0b1cc26c6
+user@host:/$ conf-dump
 vfs=vfs/minimal.xml
-script=startup/stage2.txt
-user@host:~$ ls
-ls
-user@host:~$ ls -l /home/user
-ls -l /home/user
-user@host:~$ cd /tmp
-cd /tmp
-user@host:~$ cd
-cd
-user@host:~$ conf-dump extra
-conf-dump: too many arguments
+script=startup/stage3.txt
+user@host:/$ ls
+hello.txt
+user@host:/$ ls -l
+-rw-r--r-- user     13 hello.txt
+user@host:/$ cd /
+user@host:/$ cd
+user@host:/$ vfs-info --all
+vfs-info: too many arguments
 Выполнение скрипта остановлено из-за ошибки
 ```
