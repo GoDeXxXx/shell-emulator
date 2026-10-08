@@ -1,5 +1,6 @@
 """Тесты основных команд на примере VFS deep.xml."""
 
+import hashlib
 import os
 import platform
 import time
@@ -155,6 +156,100 @@ class UnameTest(CommandTestCase):
         """Ошибки uname."""
         self.assert_error("uname -q", "uname: invalid option -- 'q'")
         self.assert_error("uname all", "uname: extra operand 'all'")
+
+
+class MkdirTest(CommandTestCase):
+    """Тесты команды mkdir."""
+
+    def test_create(self):
+        """Каталог создается по абсолютному и относительному пути."""
+        self.run_cmd("mkdir /home/user/projects")
+        self.run_cmd("cd /home")
+        self.run_cmd("mkdir guest")
+        self.assertEqual(self.run_cmd("ls /home"), "guest  user")
+        self.assertEqual(self.run_cmd("ls /home/user"), "docs  projects")
+
+    def test_several(self):
+        """Можно создать несколько каталогов сразу."""
+        self.run_cmd("mkdir /tmp/a /tmp/b")
+        self.assertEqual(self.run_cmd("ls /tmp"), "a  b")
+
+    def test_parents(self):
+        """Опция -p создает родительские каталоги."""
+        self.run_cmd("mkdir -p /tmp/a/b/c")
+        self.run_cmd("mkdir -p /tmp/a/b")
+        self.run_cmd("cd /tmp/a/b/c")
+        self.assertIn(":/tmp/a/b/c$", self.shell.prompt())
+
+    def test_new_dir_mode(self):
+        """Новый каталог получает права 755."""
+        self.run_cmd("mkdir /tmp/new")
+        self.assertTrue(self.run_cmd("ls -l /tmp").startswith("drwxr-xr-x"))
+
+    def test_errors(self):
+        """Ошибки mkdir."""
+        error = "mkdir: cannot create directory"
+        self.assert_error("mkdir", "mkdir: missing operand")
+        self.assert_error("mkdir /etc", f"{error} '/etc': File exists")
+        self.assert_error("mkdir /a/b",
+                          f"{error} '/a/b': No such file or directory")
+        self.assert_error("mkdir -p /etc/passwd/x",
+                          f"{error} '/etc/passwd/x': Not a directory")
+        self.assert_error("mkdir -m 700 /tmp/x",
+                          "mkdir: invalid option -- 'm'")
+
+    def test_file_not_changed(self):
+        """Изменения VFS не записываются в XML-файл."""
+        with open(DEEP_VFS, "rb") as file:
+            before = hashlib.sha256(file.read()).hexdigest()
+        self.run_cmd("mkdir -p /tmp/a/b")
+        self.run_cmd("chmod 700 /etc")
+        with open(DEEP_VFS, "rb") as file:
+            after = hashlib.sha256(file.read()).hexdigest()
+        self.assertEqual(before, after)
+
+
+class ChmodTest(CommandTestCase):
+    """Тесты команды chmod."""
+
+    def mode(self, path):
+        """Возвращает права узла в виде строки."""
+        return self.shell.find("test", path).mode_string()
+
+    def test_octal(self):
+        """Права в восьмеричной записи."""
+        self.run_cmd("chmod 700 /home")
+        self.assertEqual(self.mode("/home"), "drwx------")
+
+    def test_symbolic(self):
+        """Права в символьной записи."""
+        self.run_cmd("chmod +x /etc/hostname")
+        self.assertEqual(self.mode("/etc/hostname"), "-rwxr-xr-x")
+        self.run_cmd("chmod go-rx /etc/hostname")
+        self.assertEqual(self.mode("/etc/hostname"), "-rwx------")
+        self.run_cmd("chmod a=r /etc/hostname")
+        self.assertEqual(self.mode("/etc/hostname"), "-r--r--r--")
+
+    def test_several_parts(self):
+        """Несколько частей через запятую."""
+        self.run_cmd("chmod u=rwx,go=r /bin")
+        self.assertEqual(self.mode("/bin"), "drwxr--r--")
+
+    def test_several_files(self):
+        """Права меняются у всех перечисленных файлов."""
+        self.run_cmd("chmod 600 /etc/hostname /etc/passwd")
+        self.assertEqual(self.mode("/etc/hostname"), "-rw-------")
+        self.assertEqual(self.mode("/etc/passwd"), "-rw-------")
+
+    def test_errors(self):
+        """Ошибки chmod не меняют права."""
+        self.assert_error("chmod", "chmod: missing operand")
+        self.assert_error("chmod 755", "chmod: missing operand")
+        self.assert_error("chmod 999 /etc", "chmod: invalid mode: '999'")
+        self.assert_error("chmod u+z /etc", "chmod: invalid mode: 'u+z'")
+        self.assert_error("chmod 700 /etc /nope",
+                          "chmod: /nope: No such file or directory")
+        self.assertEqual(self.mode("/etc"), "drwxr-xr-x")
 
 
 if __name__ == "__main__":

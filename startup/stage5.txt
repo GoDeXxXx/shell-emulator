@@ -1,0 +1,27 @@
+# Проверка команд этапа 5, запускать с vfs/deep.xml
+vfs-info
+ls -l /home/user
+mkdir /home/user/projects
+mkdir /tmp/a /tmp/b
+mkdir -p /home/user/projects/lab/src
+mkdir -p /home/user/projects/lab
+ls /home/user/projects
+cd /home/user/projects/lab
+ls
+mkdir tests
+ls -l
+cd ../../../..
+ls -l
+chmod 700 /home/user/projects
+chmod +x /etc/hostname
+chmod go-r /etc/passwd
+chmod u=rwx,go=r /tmp/a /tmp/b
+chmod a=rw /home/user/docs/notes.txt
+ls -l /home/user
+ls -l /etc
+ls -l /tmp
+ls -l /home/user/docs
+tac /home/user/docs/notes.txt
+vfs-info
+mkdir /etc
+ls

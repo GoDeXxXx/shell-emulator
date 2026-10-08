@@ -85,6 +85,8 @@ VFS загружается из XML-файла, указанного в `--vfs`,
 | `date [+формат]` | текущие дата и время |
 | `tac файл...` | строки файлов в обратном порядке |
 | `uname [-snrvma]` | информация о системе |
+| `mkdir [-p] каталог...` | создание каталогов |
+| `chmod режим путь...` | изменение прав доступа |
 | `conf-dump` | параметры эмулятора в формате ключ=значение |
 | `vfs-info` | имя VFS и хеш SHA-256 ее данных |
 | `exit [код]` | закрывает эмулятор с указанным кодом (по умолчанию 0) |
@@ -103,7 +105,16 @@ VFS загружается из XML-файла, указанного в `--vfs`,
   `date +%d.%m.%Y`;
 - `uname -s` имя системы, `-n` имя узла, `-r` версия ядра,
   `-v` описание ядра, `-m` архитектура, `-a` все сразу. Без опций
-  работает как `uname -s`. Данные берутся из реальной ОС.
+  работает как `uname -s`. Данные берутся из реальной ОС;
+- `mkdir -p` создает и все недостающие родительские каталоги,
+  а для существующего каталога не выдает ошибку;
+- `chmod` принимает права в восьмеричном виде (`chmod 755 файл`)
+  и в символьном (`chmod u+x файл`, `chmod go-w файл`,
+  `chmod a=r файл`, `chmod u=rwx,go=r каталог`).
+
+Команды `mkdir` и `chmod` меняют VFS только в памяти, XML-файл
+остается прежним. Поэтому `vfs-info` после изменений выводит тот
+же хеш, а после перезапуска эмулятора VFS снова загружается из файла.
 
 Сообщения об ошибках:
 
@@ -116,6 +127,8 @@ VFS загружается из XML-файла, указанного в `--vfs`,
 | неизвестная опция | `ls: invalid option -- 'z'` |
 | лишние аргументы | `cd: too many arguments` |
 | нет аргумента | `tac: missing file operand` |
+| каталог уже есть | `mkdir: cannot create directory '/etc': File exists` |
+| неверные права | `chmod: invalid mode: '999'` |
 | неверный аргумент | `exit: abc: numeric argument required` |
 
 ## Сборка и запуск
@@ -165,6 +178,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 | `scripts/test_vfs_deep.sh` | VFS с несколькими уровнями вложенности |
 | `scripts/test_vfs_errors.sh` | ошибки загрузки VFS |
 | `scripts/test_stage4.sh` | команды этапа 4 |
+| `scripts/test_stage5.sh` | команды этапа 5 |
 
 Каждый скрипт по очереди открывает несколько окон эмулятора,
 следующее окно открывается после закрытия предыдущего.
@@ -199,6 +213,18 @@ user@host:/$ date +%d.%m.%Y
 08.10.2026
 user@host:/$ uname -sm
 Darwin arm64
+user@host:/$ mkdir -p /home/user/projects/lab
+user@host:/$ mkdir /tmp/a /tmp/b
+user@host:/$ ls /tmp
+a  b
+user@host:/$ chmod 700 /home/user/projects
+user@host:/$ chmod go-r /etc/passwd
+user@host:/$ chmod +x /etc/hostname
+user@host:/$ ls -l /etc
+-rwxr-xr-x user      8 hostname
+-rw------- user     71 passwd
+user@host:/$ mkdir /etc
+mkdir: cannot create directory '/etc': File exists
 user@host:/$ cd /etc/passwd
 cd: /etc/passwd: Not a directory
 user@host:/$ hello

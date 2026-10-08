@@ -2,13 +2,18 @@
 
 import getpass
 import platform
+import re
 import socket
 import time
 
-from vfs import Vfs, load_vfs
+from vfs import DIR_MODE, Node, Vfs, load_vfs, step
 
 DATE_FORMAT = "%a %b %d %H:%M:%S %Z %Y"
 UNAME_FLAGS = "snrvm"
+OCTAL_MODE = "[0-7]{3}"
+SYMBOLIC_MODE = "([ugoa]*)([-+=])([rwx]+)"
+SHIFTS = {"u": 6, "g": 3, "o": 0}
+PERMISSION_BITS = {"r": 4, "w": 2, "x": 1}
 
 
 class ShellError(Exception):
@@ -58,6 +63,34 @@ def list_dir(node, show_all):
             if not name.startswith(".")]
 
 
+def apply_symbolic(mode, spec):
+    """Применяет одну символьную запись прав вида u+x."""
+    who, operator, permissions = re.fullmatch(SYMBOLIC_MODE, spec).groups()
+    who = who.replace("a", "ugo") or "ugo"
+    bits = 0
+    mask = 0
+    for person in who:
+        mask |= 0o7 << SHIFTS[person]
+        for permission in permissions:
+            bits |= PERMISSION_BITS[permission] << SHIFTS[person]
+    if operator == "+":
+        return mode | bits
+    if operator == "-":
+        return mode & ~bits
+    return mode & ~mask | bits
+
+
+def change_mode(mode, spec):
+    """Возвращает новые права по записи вида 755, u+x или u=rwx,go=r."""
+    if re.fullmatch(OCTAL_MODE, spec):
+        return int(spec, 8)
+    if not re.fullmatch(f"{SYMBOLIC_MODE}(,{SYMBOLIC_MODE})*", spec):
+        raise ShellError(f"chmod: invalid mode: '{spec}'")
+    for part in spec.split(","):
+        mode = apply_symbolic(mode, part)
+    return mode
+
+
 class Shell:
     """Эмулятор командной оболочки UNIX."""
 
@@ -79,6 +112,8 @@ class Shell:
             "date": self.cmd_date,
             "tac": self.cmd_tac,
             "uname": self.cmd_uname,
+            "mkdir": self.cmd_mkdir,
+            "chmod": self.cmd_chmod,
         }
 
     def load_vfs(self):
@@ -198,3 +233,50 @@ class Shell:
             flags = set(UNAME_FLAGS)
         keys = [key for key in UNAME_FLAGS if key in flags] or ["s"]
         return " ".join(values[key] for key in keys)
+
+    def make_dir(self, path):
+        """Создает каталог, родительский каталог должен существовать."""
+        parent_path, _, name = path.rstrip("/").rpartition("/")
+        if not parent_path:
+            parent_path = "/" if path.startswith("/") else "."
+        parent = self.vfs.find(self.cwd, parent_path)
+        error = f"mkdir: cannot create directory '{path}'"
+        if parent is None:
+            raise ShellError(f"{error}: No such file or directory")
+        if not parent.is_dir:
+            raise ShellError(f"{error}: Not a directory")
+        if name in parent.children or name in ("", ".", ".."):
+            raise ShellError(f"{error}: File exists")
+        parent.add(Node(name, True, DIR_MODE))
+
+    def make_parents(self, path):
+        """Создает каталог вместе со всеми родительскими каталогами."""
+        node = self.vfs.root if path.startswith("/") else self.cwd
+        for part in path.split("/"):
+            if part not in ("", ".", "..") and part not in node.children:
+                node.add(Node(part, True, DIR_MODE))
+            node = step(node, part)
+            if node is None or not node.is_dir:
+                raise ShellError(f"mkdir: cannot create directory '{path}'"
+                                 ": Not a directory")
+
+    def cmd_mkdir(self, args):
+        """Создает каталоги, с опцией -p вместе с родительскими."""
+        flags, paths = split_options("mkdir", args, "p")
+        if not paths:
+            raise ShellError("mkdir: missing operand")
+        for path in paths:
+            if "p" in flags:
+                self.make_parents(path)
+            else:
+                self.make_dir(path)
+        return ""
+
+    def cmd_chmod(self, args):
+        """Меняет права доступа к файлам и каталогам."""
+        if not args[1:]:
+            raise ShellError("chmod: missing operand")
+        nodes = [self.find("chmod", path) for path in args[1:]]
+        for node in nodes:
+            node.mode = change_mode(node.mode, args[0])
+        return ""
