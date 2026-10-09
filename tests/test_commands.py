@@ -6,7 +6,7 @@ import platform
 import time
 import unittest
 
-from shell import Shell, ShellError
+from shell import Shell, ShellError, human_size
 
 DEEP_VFS = os.path.join(os.path.dirname(__file__), "..", "vfs", "deep.xml")
 
@@ -59,11 +59,39 @@ class LsTest(CommandTestCase):
         """Для файла выводится его путь."""
         self.assertEqual(self.run_cmd("ls /etc/passwd"), "/etc/passwd")
 
+    def test_human_size(self):
+        """Опция -h вместе с -l выводит размер в читаемом виде."""
+        self.assertTrue(self.run_cmd("ls -l /bin").endswith(" 2600 hello"))
+        self.assertTrue(self.run_cmd("ls -lh /bin").endswith(" 2.6K hello"))
+        self.assertEqual(self.run_cmd("ls -h /bin"), "hello")
+
     def test_errors(self):
         """Ошибки ls."""
         self.assert_error("ls /nope", "ls: /nope: No such file or directory")
         self.assert_error("ls -z", "ls: invalid option -- 'z'")
         self.assert_error("ls /etc /bin", "ls: too many arguments")
+
+
+class HumanSizeTest(unittest.TestCase):
+    """Тесты перевода размера в читаемый вид."""
+
+    def test_bytes(self):
+        """Размер меньше килобайта выводится в байтах."""
+        self.assertEqual(human_size(0), "0")
+        self.assertEqual(human_size(1023), "1023")
+
+    def test_units(self):
+        """Большие размеры выводятся в K, M и G."""
+        self.assertEqual(human_size(1024), "1.0K")
+        self.assertEqual(human_size(1536), "1.5K")
+        self.assertEqual(human_size(10240), "10K")
+        self.assertEqual(human_size(5 * 1024 * 1024), "5.0M")
+        self.assertEqual(human_size(3 * 1024 ** 3), "3.0G")
+
+    def test_round_up(self):
+        """Дробная часть округляется вверх, как в ls."""
+        self.assertEqual(human_size(2600), "2.6K")
+        self.assertEqual(human_size(10239), "10K")
 
 
 class CdTest(CommandTestCase):
