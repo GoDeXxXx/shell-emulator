@@ -80,7 +80,7 @@ VFS загружается из XML-файла, указанного в `--vfs`,
 
 | Команда | Описание |
 |---------|----------|
-| `ls [-a] [-l] [путь]` | содержимое каталога или имя файла |
+| `ls [-a] [-h] [-l] [путь]` | содержимое каталога или имя файла |
 | `cd [путь]` | переход в каталог, без аргумента в корень `/` |
 | `date [+формат]` | текущие дата и время |
 | `tac файл...` | строки файлов в обратном порядке |
@@ -98,7 +98,9 @@ VFS загружается из XML-файла, указанного в `--vfs`,
 
 - `ls -a` показывает скрытые файлы, а также `.` и `..`;
 - `ls -l` выводит права доступа, владельца и размер;
-- опции можно объединять: `ls -la`;
+- `ls -h` вместе с `-l` выводит размер в читаемом виде, например
+  `2.6K` вместо `2600`, без `-l` вывод не меняется;
+- опции можно объединять: `ls -la`, `ls -lh`;
 - `date +ФОРМАТ` выводит дату в формате strftime, например
   `date +%d.%m.%Y`;
 - `uname -s` имя системы, `-n` имя узла, `-r` версия ядра,
@@ -176,7 +178,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 user@host:/$ vfs-info
 name: deep
-sha256: b1155a742c81805ae6cbc7e23d3c1f213d601cc613de7193341489b4f0039411
+sha256: 004ca3aa3798557d89b3ca0262f266fd1f109a7f8eb56bce0a12a57e6a6b2335
 user@host:/$ ls
 bin  etc  home  tmp
 user@host:/$ ls -la /home/user
@@ -184,6 +186,10 @@ drwxr-xr-x user      0 .
 drwxr-xr-x user      0 ..
 -rw------- user     25 .profile
 drwxr-xr-x user      0 docs
+user@host:/$ ls -l /bin
+-rwxr-xr-x user   2600 hello
+user@host:/$ ls -lh /bin
+-rwxr-xr-x user   2.6K hello
 user@host:/$ cd /home/user/docs
 user@host:/home/user/docs$ ls -l
 -rw-r--r-- user     34 notes.txt

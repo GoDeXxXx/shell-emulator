@@ -4,6 +4,9 @@ ls
 ls -a
 ls -l /etc
 ls -la /home/user
+ls -l /bin
+ls -lh /bin
+ls -lah /home/user
 ls /etc/passwd
 cd /home/user/docs
 ls -l

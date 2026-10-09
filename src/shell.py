@@ -1,6 +1,7 @@
 """Логика эмулятора: разбор и выполнение команд."""
 
 import getpass
+import math
 import platform
 import socket
 import time
@@ -9,6 +10,9 @@ from vfs import Vfs, load_vfs
 
 DATE_FORMAT = "%a %b %d %H:%M:%S %Z %Y"
 UNAME_FLAGS = "snrvm"
+KILOBYTE = 1024
+SIZE_UNITS = "KMGT"
+SMALL_SIZE = 10
 
 
 class ShellError(Exception):
@@ -47,6 +51,23 @@ def split_options(name, args, allowed):
                 raise ShellError(f"{name}: invalid option -- '{flag}'")
             flags.add(flag)
     return flags, operands
+
+
+def human_size(size):
+    """Возвращает размер в читаемом виде: 512, 1.5K, 20M."""
+    if size < KILOBYTE:
+        return str(size)
+    value = size / KILOBYTE
+    index = 0
+    while value >= KILOBYTE and index < len(SIZE_UNITS) - 1:
+        value /= KILOBYTE
+        index += 1
+    unit = SIZE_UNITS[index]
+    if value < SMALL_SIZE:
+        value = math.ceil(value * SMALL_SIZE) / SMALL_SIZE
+        if value < SMALL_SIZE:
+            return f"{value:.1f}{unit}"
+    return f"{math.ceil(value)}{unit}"
 
 
 def list_dir(node, show_all):
@@ -108,14 +129,16 @@ class Shell:
             raise ShellError(f"{name}: {path}: No such file or directory")
         return node
 
-    def long_entry(self, name, node):
+    def long_entry(self, name, node, human):
         """Возвращает строку для подробного вывода ls -l."""
         size = len(node.data)
+        if human:
+            size = human_size(size)
         return f"{node.mode_string()} {self.user} {size:>6} {name}"
 
     def cmd_ls(self, args):
         """Выводит содержимое каталога или имя файла."""
-        flags, paths = split_options("ls", args, "al")
+        flags, paths = split_options("ls", args, "ahl")
         if paths[1:]:
             raise ShellError("ls: too many arguments")
         path = paths[0] if paths else "."
@@ -125,7 +148,9 @@ class Shell:
         else:
             entries = [(path, node)]
         if "l" in flags:
-            lines = [self.long_entry(name, item) for name, item in entries]
+            human = "h" in flags
+            lines = [self.long_entry(name, item, human)
+                     for name, item in entries]
             return "\n".join(lines)
         return "  ".join(name for name, _ in entries)
 
